@@ -1,5 +1,268 @@
 # Da Reunião ao Documento: Design Docs Gerados por IA
 
+Pacote de design docs do Sistema de Webhooks de Notificação de Pedidos, produzido com IA a partir de uma transcrição de reunião e do código de um Order Management System.
+
+O enunciado original está na [seção recolhida no fim deste documento](#enunciado-original) e no [repositório base do desafio](https://github.com/devfullcycle/mba-ia-desafio-design-docs-com-ia).
+
+## Sobre o desafio
+
+Uma empresa com um Order Management System em produção decidiu, em uma reunião técnica, construir webhooks de notificação para clientes B2B, mas só a transcrição da call ficou registrada. A tarefa foi transformar essa transcrição e o código existente em uma documentação que permita ao time começar a implementar: PRD, RFC, FDD, ADRs e um tracker de rastreabilidade.
+
+A entrega é só documental, e a regra central é não inventar nada: cada requisito, decisão ou restrição precisa ter origem em uma fala da reunião, em um arquivo do código ou em uma exigência do enunciado. As escolhas minhas em pontos que a reunião não fechou ficam marcadas como `[Decisão do autor]`, pendentes de confirmação dos revisores. A IA produziu o conteúdo, enquanto eu defini o que fazer, revisei e direcionei as correções.
+
+## Ferramentas de IA utilizadas
+
+- **Claude Code (Claude Opus 5.5):** ferramenta principal. Leu enunciado, templates, transcrição e código, escreveu os documentos e executou as verificações.
+- **Prompts de PRD, FDD e HLD do curso:** usados como base de formato. Como são prompts de entrevista, a transcrição e o código fizeram o papel das respostas. O HLD alimentou a proposta técnica do RFC.
+- **Plugin `adrs-management` do curso:** lido como referência para o formato MADR e os filtros de decisão. Os plugins não foram executados, e o template de ADR foi adaptado, como descrito abaixo.
+- **Scripts de verificação em Python:** criados durante o processo para conferir citações, caminhos, exemplos, IDs e changelog, sem alterar o código da aplicação.
+
+## Workflow adotado
+
+O trabalho teve duas fases: gerar o pacote e, depois, resolver os pontos em aberto.
+
+**Fase 1: geração**
+
+1. **Entendimento do enunciado:** antes de produzir, pedi à IA que explicasse o que precisava ser entregue.
+2. **Contexto dos templates:** a IA leu os materiais do curso e apontou onde eles conflitavam com o enunciado.
+3. **Análise da transcrição:** uma leitura exploratória separou decisões, alternativas, adiamentos e lacunas, sem interpretação além do que foi dito.
+4. **Conferência no código:** o que a reunião afirmou sobre o código foi confirmado nos arquivos antes da escrita.
+5. **Geração na ordem do enunciado:** ADRs, RFC, FDD e PRD, atualizando `docs/TRACKER.md` ao concluir cada documento.
+6. **Verificação e revisão:** um script conferiu citações, arquivos e IDs, e uma revisão manual procurou o que o script não detecta, como uma citação que não sustenta a frase.
+
+**Fase 2: resolução dos pontos em aberto**
+
+Em uma branch própria, com o pacote da fase 1 como linha de base, o trabalho foi dividido em 5 iterações. A ordem saiu de uma medição de quantas referências cada documento recebia dos demais: primeiro o que afeta menos documentos ao mudar.
+
+| Iteração | Documento | Referências recebidas |
+| --- | --- | --- |
+| 1 | PRD e estrutura de changelog | 1 |
+| 2 | FDD | 7 |
+| 3 | RFC | 9 |
+| 4 | ADRs, do menos para o mais referenciado | 10 a 17 cada |
+| 5 | README e fechamento | 0, mas descreve todos os demais |
+
+Cada iteração alterou só os documentos dela e o tracker; o que precisava mudar em outro documento virou uma pendência. A exceção foi a iteração 5, que também alterou o PRD e o FDD para fechar o pacote (CHG-031, CHG-032). Cada uma terminou em uma revisão minha, e só foi commitada depois do meu OK explícito. O tracker e os changelogs cobrem PRD, RFC, FDD e ADRs.
+
+Depois das iterações, uma revisão extensa de citações (CHG-036 a CHG-040) reabriu a `RFC-QA-12`, e ajustes no tracker e nos links fecharam o pacote (CHG-034, CHG-035, CHG-041 a CHG-052). O histórico da branch foi então unificado (CHG-053), por isso o log mostra o pacote em um único commit, sem um commit por iteração.
+
+**Marcadores de conteúdo**
+
+- **Sem marcador:** acordado na reunião ou existente no código.
+- **`[Derivado]`:** decorre do código ou de uma decisão fechada, ou é exigido pelo enunciado, sem propor comportamento novo.
+- **`[Decisão do autor]`:** escolha minha em ponto que a reunião não fechou, pendente de confirmação dos revisores.
+- **`[Não definido]`:** sem resposta nas fontes, registrado sem sugestão. O FDD reúne esses pontos na seção 14, com IDs `FDD-ND`, e os ADRs usam "Não definido na reunião".
+- **`análise:`:** conclusão que ninguém afirmou na reunião, usada nos ADRs, com a indicação de em que se apoia.
+
+## Prompts customizados
+
+**Análise exploratória da transcrição.** Escrito para evitar que a IA completasse lacunas por conta própria:
+
+```text
+Quero que você analise agora o @TRANSCRICAO.md de forma exploratória para entender o
+conteúdo da reunião, objeto em discussão, e as decisões tomadas. Esqueça as frivolidades e
+conteúdo não relevante da transcrição e foque no objetivo da discussão. Nunca faça
+pré-julgamentos e deduções, trabalhe sempre no que é/foi discutido e também tenha o cuidado
+de não extrapolar/superestimar/subestimar o conteúdo discutido da transcrição.
+```
+
+**Persona para o template de ADR.** Forneci à IA os documentos base das aulas do curso e o agente `adr-generator`. A geração dos ADRs usou a persona e as regras iniciais de origem, adaptadas do agente. Esta é a versão revisada do prompt, no formato Skeleton of Thought (primeiro o esqueleto, depois a expansão de cada item), montada depois dos ADRs prontos: o esqueleto e os limites vêm do padrão comum aos 8 ADRs, e os demais ajustes, de testes com o prompt:
+
+```text
+Use como base os documentos das aulas do curso e o agente adr-generator, adaptando-os a este
+desafio. Se esse material não trouxer insumo suficiente, use o template de prompt a seguir,
+escrito na persona de um Sênior Software Engineer com expertise em levantamento de requisitos
+funcionais e análise arquitetural, e itere sobre ele até que atenda às decisões da reunião:
+
+Você é um Sênior Software Engineer com expertise em levantamento de requisitos funcionais e
+análise arquitetural. Você registra decisões que já foram tomadas: não decide de novo, não
+melhora a decisão e não preenche lacunas com boas práticas de mercado.
+
+Entrada: a decisão a registrar, @TRANSCRICAO.md e o código do repositório.
+
+Regras:
+1. Toda afirmação sobre decisão, motivo, alternativa ou restrição precisa de origem:
+   [hh:mm] Nome ou caminho de arquivo real. Prós e Contras descrevem a própria alternativa: citam
+   a fala se ela existir e, sem fala, dispensam origem e "análise:".
+2. Copie o timestamp e o falante da fala exata, depois de conferir na transcrição.
+3. Alternativa não discutida só entra se for plausível, marcada como
+   (plausível, não discutida), e nunca como motivo atribuído aos participantes.
+4. Não use [NEEDS INPUT]. Se faltar informação, escreva "Não definido na reunião" no ADR; o que
+   exceder o limite de pontos vai para o FDD.
+5. Conclusão que ninguém afirmou na reunião começa com "análise:" e indica em que se apoia.
+6. Registre só o que sustenta esta decisão. Efeito ou limite vindo de outra decisão fica no ADR
+   dela e aparece aqui apenas em Relacionados. O que a reunião fechou sobre esta decisão fica na
+   Decisão, inclusive valores, rotas e permissões.
+
+Etapa 1, esqueleto. Preencha cada item em até 10 palavras, sem contar a origem e sem redigir o
+texto:
+- Título: verbo no infinitivo seguido da decisão.
+- Status: Aceito; fala que fechou cada parte da decisão (quem encerra o ponto; sem fechamento
+  explícito, quem propôs); fala que a reafirmou, se houver; 2 ou 3 ADRs de dependência direta.
+- Contexto: problema que a reunião precisava resolver; até 4 direcionadores: fatos e avaliações
+  que motivaram a decisão, mesmo que reapareçam nas Consequências, e não a própria decisão.
+- Decisão: o que foi fechado; leitura adotada só se falas sobre esta mesma decisão divergirem. A
+  leitura cita as falas que divergem, escolhe entre elas sem criar comportamento novo, começa com
+  "análise:" e conta no limite de análises.
+- Alternativas: nome e origem de cada uma, com pelo menos 1.
+- Consequências: até 4 positivas, com o que a decisão entrega frente aos direcionadores; até 3
+  negativas, incluindo custo de construir ou operar e dependência de outra pessoa ou de revisão,
+  com a fala que os registra; até 3 análises no ADR inteiro; até 2 pontos não definidos, só se a
+  resposta não decorrer da própria decisão, com os demais para o FDD; trade-off que resume custos
+  e benefícios já registrados, começa com "aceitamos", cita as falas que os sustentam e não leva
+  "análise:".
+- Referências: as 3 ou 4 falas que definem a decisão, fecham cada parte dela ou sustentam a
+  principal negativa, sem a de reafirmação e sem repetir horário e falante; arquivos existentes em
+  que ela se apoia, com pelo menos 1.
+Confira cada origem na fonte e retire o item que ela não sustentar. Não complete item para
+atingir uma quantidade.
+
+Etapa 2, expansão. Expanda um item por vez, sem acrescentar item novo, neste formato:
+
+# ADR-NNN: <título>
+
+## Status
+Aceito
+- **Decidido em:** reunião técnica, [hh:mm] Nome (parte), uma fala por parte fechada; reafirmado
+  em [hh:mm] Nome, se houver
+- **Relacionados:** link para cada ADR escolhido, com a relação em até 3 palavras entre parênteses
+
+## Contexto
+<problema, com a origem>
+
+**Direcionadores**
+- **ADR-NNN-CTX-01:** <o que pesou na decisão> ([hh:mm] Nome).
+
+## Decisão
+<o que foi fechado, com a origem>
+
+**ADR-NNN-INT-01:** <leitura adotada e motivo; omita se não houver>
+
+## Alternativas Consideradas
+### ADR-NNN-ALT-01: <nome>
+- **Origem:** discutida em [hh:mm] Nome, ou (plausível, não discutida)
+- **Prós:** <vantagem da alternativa>
+- **Contras:** <desvantagem da alternativa>
+- **Por que foi descartada:** <motivo> ([hh:mm] Nome).
+
+## Consequências
+### Positivas
+- **ADR-NNN-CON-01:** <efeito> ([hh:mm] Nome).
+
+### Negativas
+- **ADR-NNN-CON-02:** <custo ou limite> ([hh:mm] Nome).
+
+**Não definido na reunião:** <até 2 pontos em um único parágrafo, com o ID no FDD e no RFC, se
+houver; omita se não houver>
+
+### Trade-off aceito
+**ADR-NNN-TO:** aceitamos <custo> em troca de <benefício> ([hh:mm] Nome).
+
+## Referências
+**Transcrição**
+- [hh:mm] Nome: <o que a fala sustenta>.
+
+**Código**
+- **ADR-NNN-COD-01:** `<caminho>`: <papel do arquivo na decisão>.
+
+## Changelog
+Detalhes e IDs afetados na seção Changelog de [TRACKER.md](../TRACKER.md).
+
+| CHG | Resumo |
+| --- | --- |
+| CHG-000 | Versão inicial, linha de base do pacote |
+```
+
+**Ordem de produção e papel do tracker:**
+
+```text
+Depois das ADR's iremos prosseguir com a geração dos documentos na ordem descrita pelo README, e também não muito menos importante, mantenha sempre o
+@docs/TRACKER.md atualizado, pois é justamente seu documento orientador junto do README do
+trabalho à ser feito e/ou atualmente realizado.
+```
+
+**Versão consolidada do prompt de iterações.** Reúne a ordem medida, as regras de conteúdo e o registro obrigatório, definidos ao longo do trabalho:
+
+```text
+Vamos resolver os pontos em aberto do pacote em 5 iterações, na branch
+feat/add-arch-tech-design-docs-with-ai, com o commit atual como linha de base.
+
+A ordem segue o acoplamento: quanto mais referências um documento recebe, mais tarde ele muda.
+
+1. PRD: só o README aponta para ele. Crie aqui as seções Changelog e Pendências do tracker.
+2. FDD: feche os pontos de implementação que puderem ser fechados com as fontes.
+3. RFC: reflita o resultado do FDD e separe as questões em adiadas, aguardando revisores e
+   fechadas.
+4. ADRs: revise nesta ordem: 003, 005, 007, 008, 001, 006, 002, 004.
+5. README e fechamento: resolva as pendências restantes e refaça a checklist do enunciado.
+
+Regras de conteúdo:
+- Mantenha o que foi acordado na reunião ou existe no código, com a origem indicada.
+- Marque como [Derivado] o que decorre do código ou de uma decisão fechada, ou o que o enunciado
+  exige.
+- Registre o restante como "Não definido na reunião", sem sugerir resposta.
+- Abra a fala de cada [hh:mm] Nome e confirme que ela sustenta a frase em que foi citada.
+
+Regras de cada iteração:
+- Altere somente os documentos da iteração e o docs/TRACKER.md.
+- Se outro documento precisar mudar, registre o motivo em "## Pendências" no tracker.
+- Não renomeie arquivos nem reutilize IDs.
+
+Registro obrigatório de alterações:
+- Toda alteração, inclusive de citação, recebe um CHG-NNN na seção "## Changelog" do tracker,
+  com documento, IDs afetados e motivo.
+- O mesmo CHG aparece na seção "## Changelog" do documento alterado, com link para o tracker.
+- A matriz de rastreabilidade acompanha cada mudança.
+
+Ao final de cada iteração, rode as verificações, me mostre o que mudou e o que continua aberto,
+e pare. Só faça o commit depois do meu OK explícito.
+```
+
+## Iterações e ajustes
+
+**Fase 1: geração**
+
+1. **`adr-generator` insuficiente sozinho.** O agente extrai decisões de código e histórico git, grava em outra estrutura de pastas e aceita marcadores `[NEEDS INPUT]`. As decisões deste desafio vêm de uma reunião e ainda não existem no código, e esse material não bastava. Por isso, usamos o formato dele em conjunto com o nosso prompt personalizado, que traz a persona e exige origem para cada afirmação.
+2. **Valores padrão dos templates.** O prompt de PRD sugere hipóteses como 99.9% de disponibilidade e p95 de 150 ms. Como a reunião não tratou disso, o PRD registra a ausência da meta em vez de adotar esses números.
+3. **Afirmações da reunião que o código refinou.**
+   - O débito de estoque não ocorre em toda mudança de status, só de PENDING para PAID.
+   - As rotas ficam sob `/api/v1`, embora a reunião as tenha citado sem prefixo.
+   - `NotFoundError` fixa o código `NOT_FOUND`, então `WEBHOOK_NOT_FOUND` precisa de classe própria.
+   - `validate` converte toda falha de schema em `VALIDATION_ERROR`, então uma URL `http` não responde `WEBHOOK_INVALID_URL` com o middleware atual.
+4. **Riscos encontrados só no código.** `POST /auth/register` é público e aceita `role: ADMIN`, e não há vínculo entre usuário e customer. Os dois pontos viraram riscos, porque afetam a proteção combinada para o replay e o CRUD.
+5. **Ambiguidade de "5 tentativas".** A frase sobre "quase 15 horas" ([09:17] Diego) só fecha com um envio inicial mais 5 reenvios. A leitura ficou registrada como interpretação no ADR-004 e no RFC.
+6. **Erros corrigidos na verificação e na revisão.**
+   - O script apontou um falante inexistente no ADR-008, causado por um trecho de texto lido como citação.
+   - A revisão manual removeu do PRD uma menção a "retorno dos três clientes", que a reunião não fez.
+   - A mesma revisão acrescentou exemplos de requisição aos endpoints do FDD que só tinham resposta.
+
+**Fase 2: resolução dos pontos em aberto**
+
+7. **Conteúdo sem origem que a primeira revisão deixou passar (CHG-002, CHG-003, CHG-005).** O PRD tinha a meta "3 de 3 clientes", que ninguém declarou, e tratava o prazo sem separar estimativa, pedido do cliente e confirmação, que ainda não existe. Duas citações também não sustentavam a frase em que estavam.
+8. **A mudança mais importante: o FDD deixou de sugerir (CHG-009 a CHG-016).** A primeira versão tinha 38 linhas com itens marcados como proposta, como lote de 10, regra de 2xx, formato da assinatura e cascatas. Quando a IA me pediu para escolher entre as opções, respondi que deveríamos nos ater ao que foi acordado. Isso entrava em conflito com o enunciado, que exige status codes, métricas e tracing que a reunião não detalhou. A solução veio do próprio enunciado: tudo precisa ser rastreável, então fica o acordado e o derivado do código ou exigido pelo enunciado, e o resto vira um ponto não definido, salvo as escolhas marcadas como `[Decisão do autor]`, que aguardam os revisores. O custo é um FDD menos pronto para codar: o caso de um customer com vários webhooks depende da revisão do design.
+9. **Citações que pareciam certas (CHG-012, CHG-014, CHG-024).** O validador confirma que a fala existe, não que ela diz aquilo. A auditoria encontrou uma alternativa atribuída a Bruno, que falava apenas do logger, e o vazamento em log de um cliente usado como motivo para mudar o nosso logger.
+10. **Questões em aberto reorganizadas (CHG-018, CHG-019).** O RFC separou adiadas, aguardando revisores e fechadas. Duas foram fechadas com base nas fontes, e o arquivamento saiu das questões, porque a reunião o colocou fora do escopo.
+11. **Teste de uma afirmação técnica (CHG-015).** A montagem da rota aninhada foi testada em Express 4.21.1: sem `mergeParams`, o `customerId` chega indefinido, e registrada depois de `/customers`, ela passa duas vezes pela autenticação.
+
+## Como navegar a entrega
+
+| Ordem | Arquivo | O que responde |
+| --- | --- | --- |
+| 1 | [`docs/PRD.md`](docs/PRD.md) | Por que e o quê: problema, escopo e métricas |
+| 2 | [`docs/RFC.md`](docs/RFC.md) | Como pretendemos resolver e o que está em aberto |
+| 3 | [`docs/adrs/`](docs/adrs/README.md) | Por que cada decisão foi tomada assim |
+| 4 | [`docs/FDD.md`](docs/FDD.md) | Como construir, em detalhe, e o que ainda não foi definido |
+| 5 | [`docs/TRACKER.md`](docs/TRACKER.md) | De onde veio cada item e o que mudou em cada iteração |
+
+A transcrição original está em [`TRANSCRICAO.md`](TRANSCRICAO.md). O código em `src/`, `prisma/` e `tests/` não foi alterado.
+
+## Enunciado original
+
+<details>
+<summary>Ver o enunciado completo do desafio</summary>
+
+# Da Reunião ao Documento: Design Docs Gerados por IA
+
 ## Descrição
 
 Neste desafio você vai transformar a transcrição de uma reunião técnica em um pacote completo de design docs, usando IA como ferramenta principal de produção.
@@ -292,3 +555,5 @@ Cuidado com o que NÃO entra na documentação. A reunião descarta explicitamen
 A restrição de não alterar o código da aplicação é absoluta: o código serve de contexto e referência, e o entregável é puramente documental.
 
 Itere bastante. Os primeiros documentos que a IA gerar provavelmente serão superficiais ou redundantes. Volte com correções, peça refinamento de pontos específicos, peça para remover trechos vagos, peça exemplos concretos. O resultado final deve parecer escrito por alguém que pensou no problema com a IA ao lado, não por alguém que copiou e colou da transcrição.
+
+</details>
